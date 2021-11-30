@@ -84,7 +84,7 @@ public class BGPLogListener implements BGPListener {
                         )
         );
         bgpLog.getSessions().updateOne(new Document()
-                        .append("id", new ObjectId(sessionId)),
+                        .append("_id", new ObjectId(sessionId)),
                 new Document()
                         .append("$set", new Document()
                                 .append("closed_at", date)

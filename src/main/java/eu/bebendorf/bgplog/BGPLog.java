@@ -8,6 +8,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.CreateCollectionOptions;
+import com.mongodb.client.model.ValidationOptions;
 import lombok.Getter;
 import org.bson.Document;
 import org.javawebstack.webutils.config.Config;
@@ -39,6 +41,7 @@ public class BGPLog {
     public BGPLog() {
         config = new Config().add(new EnvFile(new File(".env")).withVariables(), new HashMap<String, String>() {{
             put("MONGODB_URL", "mongodb.url");
+            put("MONGODB_DATABASE", "mongodb.database");
             put("BGP_PORT", "bgp.port");
             put("BGP_HIDE_AS", "bgp.hide_as");
             put("BGP_LOCAL_AS", "bgp.local.as");
@@ -48,12 +51,8 @@ public class BGPLog {
             put("BGP_PEER_ROUTER_ID", "bgp.peer.router_id");
         }});
         ConnectionString connectionString = new ConnectionString(config.get("mongodb.url"));
-        if(connectionString.getDatabase() == null)
-            throw new RuntimeException("The mongodb url needs to specify the database");
         MongoClient client = MongoClients.create(connectionString);
-        MongoDatabase database = client.getDatabase(connectionString.getDatabase());
-        database.createCollection("sessions");
-        database.createCollection("routes");
+        MongoDatabase database = client.getDatabase(config.get("mongodb.database", "bgp-log"));
         sessions = database.getCollection("sessions");
         routes = database.getCollection("routes");
         hiddenAsns = config.get("bgp.hide_as", "").length() > 0 ? Stream.of(config.get("bgp.hide_as").split(",")).map(Integer::parseInt).collect(Collectors.toSet()) : new HashSet<>();
@@ -67,16 +66,20 @@ public class BGPLog {
         ).map(d -> d.getObjectId("_id").toString()).into(ids);
         Date date = Date.from(Instant.now());
         sessions.updateMany(new Document()
-                .append("id", new Document()
+                .append("_id", new Document()
                         .append("$in", ids)
                 ),
-                new Document().append("closed_at", date)
+                new Document().append("$set", new Document()
+                        .append("closed_at", date)
+                )
         );
         routes.updateMany(new Document()
                 .append("session_id", new Document()
                         .append("$in", ids)
                 ),
-                new Document().append("withdrawn_at", date)
+                new Document().append("$set", new Document()
+                        .append("withdrawn_at", date)
+                )
         );
     }
 
@@ -88,13 +91,17 @@ public class BGPLog {
                     .append("id", new Document()
                             .append("$in", sessionIds.values())
                     ),
-                    new Document().append("closed_at", date)
+                    new Document().append("$set", new Document()
+                            .append("closed_at", date)
+                    )
             );
             routes.updateMany(new Document()
                     .append("session_id", new Document()
                             .append("$in", sessionIds.values())
                     ),
-                    new Document().append("withdrawn_at", date)
+                    new Document().append("$set", new Document()
+                            .append("withdrawn_at", date)
+                    )
             );
         }));
         try {

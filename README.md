@@ -34,7 +34,8 @@ Configuration can be done through environment variables or a `.env` file.
 
 Name                | Description
 ------------------- | -------------------------
-MONGODB_URL         | A valid MongoDB URL including the database name
+MONGODB_URL         | The MongoDB connection url
+MONGODB_DATABASE    | MongoDB database name
 BGP_PORT            | BGP Port to listen on (default: 179)
 BGP_HIDE_AS         | Comma seperated list of as numbers which should be hidden from the as path
 BGP_LOCAL_AS        | Local AS Number
