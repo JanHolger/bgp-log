@@ -49,13 +49,13 @@ This MongoDB Shell command returns all active prefixes announced by Google
 ```js
 db.routes.find({
     $expr: {
-        $eq: [ { $last: "$path" }, 15169 ]
+        $eq: [ { $last: "$as_path" }, 15169 ]
     },
     withdrawn_at: {
         $exists: false
     }
 }, {
     plain: 1,
-    path: 1
+    as_path: 1
 })
 ```
