@@ -12,6 +12,7 @@ import org.bson.Document;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,7 @@ public class BGPLogListener implements BGPListener {
     BGPLog bgpLog;
 
     public void onOpen(BGPSession bgpSession) {
-        bgpLog.getSessionIds().entrySet().stream().filter(s -> s.getKey().getConfiguration().getName().equals(bgpSession.getConfiguration().getName())).forEach(e -> bgpLog.sessionEnded(null, e.getKey()));
+        new HashSet<>(bgpLog.getSessionIds().entrySet()).stream().filter(s -> s.getKey().getConfiguration().getName().equals(bgpSession.getConfiguration().getName())).forEach(e -> bgpLog.sessionEnded(null, e.getKey()));
         Document document = new Document()
                 .append("peer", bgpSession.getConfiguration().getName())
                 .append("opened_at", Date.from(Instant.now()));
