@@ -8,7 +8,6 @@ import com.lumaserv.bgp.protocol.attribute.PathAttribute;
 import com.lumaserv.bgp.protocol.message.BGPUpdate;
 import lombok.AllArgsConstructor;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,13 +21,13 @@ public class BGPLogListener implements BGPListener {
     BGPLog bgpLog;
 
     public void onOpen(BGPSession bgpSession) {
+        bgpLog.getSessionIds().entrySet().stream().filter(s -> s.getKey().getConfiguration().getName().equals(bgpSession.getConfiguration().getName())).forEach(e -> bgpLog.sessionEnded(null, e.getKey()));
         Document document = new Document()
                 .append("peer", bgpSession.getConfiguration().getName())
                 .append("opened_at", Date.from(Instant.now()));
         bgpLog.getSessions().insertOne(document);
         String id = document.getObjectId("_id").toString();
         bgpLog.getSessionIds().put(bgpSession, id);
-        System.out.println("Session " + id + " with peer " + bgpSession.getConfiguration().getName() + " establied!");
     }
 
     public void onUpdate(BGPSession bgpSession, BGPUpdate bgpUpdate) {
@@ -71,27 +70,7 @@ public class BGPLogListener implements BGPListener {
     }
 
     public void onClose(BGPSession bgpSession) {
-        String sessionId = bgpLog.getSessionIds().get(bgpSession);
-        if(sessionId == null)
-            return;
-        Date date = Date.from(Instant.now());
-        bgpLog.getRoutes().updateMany(new Document()
-                        .append("session_id", sessionId)
-                        .append("withdrawn_at", null),
-                new Document()
-                        .append("$set", new Document()
-                                .append("withdrawn_at", date)
-                        )
-        );
-        bgpLog.getSessions().updateOne(new Document()
-                        .append("_id", new ObjectId(sessionId)),
-                new Document()
-                        .append("$set", new Document()
-                                .append("closed_at", date)
-                        )
-        );
-        bgpLog.getSessionIds().remove(bgpSession);
-        System.out.println("Session " + sessionId + " with peer " + bgpSession.getConfiguration().getName() + " gracefully closed!");
+        bgpLog.sessionEnded(null, bgpSession);
     }
 
 }

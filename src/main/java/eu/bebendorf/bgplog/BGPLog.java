@@ -12,6 +12,7 @@ import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.ValidationOptions;
 import lombok.Getter;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.javawebstack.webutils.config.Config;
 import org.javawebstack.webutils.config.EnvFile;
 
@@ -80,6 +81,36 @@ public class BGPLog {
                 new Document().append("$set", new Document()
                         .append("withdrawn_at", date)
                 )
+        );
+    }
+
+    public void sessionEnded(String id, BGPSession bgpSession) {
+        if(bgpSession == null) {
+            final String fid = id;
+            bgpSession = sessionIds.entrySet().stream().filter(s -> s.getValue().equals(fid)).map(Map.Entry::getKey).findFirst().orElse(null);
+            if(bgpSession != null)
+                sessionIds.remove(bgpSession);
+        } else {
+            id = sessionIds.get(bgpSession);
+            sessionIds.remove(bgpSession);
+        }
+        if(id == null)
+            return;
+        Date date = Date.from(Instant.now());
+        routes.updateMany(new Document()
+                        .append("session_id", id)
+                        .append("withdrawn_at", null),
+                new Document()
+                        .append("$set", new Document()
+                                .append("withdrawn_at", date)
+                        )
+        );
+        routes.updateOne(new Document()
+                        .append("_id", new ObjectId(id)),
+                new Document()
+                        .append("$set", new Document()
+                                .append("closed_at", date)
+                        )
         );
     }
 
